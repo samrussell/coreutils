@@ -23,7 +23,7 @@
 #include "system.h"
 
 /* Number of bytes to read at once.  */
-#define BUFLEN (1 << 20)
+#define BUFLEN (1 << 15)
 
 extern uint_fast32_t const crctab[8][256];
 
@@ -44,7 +44,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
   bool data_available = true;
   __m128i single_mult_constant;
   __m128i four_mult_constant;
-  __m128i twelve_mult_constant;
+  __m128i eight_mult_constant;
   __m128i shuffle_constant;
 
   if (!fp || !crc_out || !length_out)
@@ -56,13 +56,13 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
      2^(128+64) mod P = 0xC5B9CD4C
      2^(128*4) mod P = 0xE6228B11
      2^(128*4+64) mod P = 0x8833794C
-     2^(128*8) mod P = 0xD2536D46
-     2^(128*8+64) mod P = 0xDC53DFCC
+     2^(128*8) mod P = 0x567FDDEB
+     2^(128*8+64) mod P = 0x10BD4D7C
    */
   single_mult_constant = _mm_set_epi64x (0xC5B9CD4C, 0xE8A45605);
   four_mult_constant = _mm_set_epi64x (0x8833794C, 0xE6228B11);
   /* Extra fold for algorithm from https://arxiv.org/abs/2412.16398 */
-  twelve_mult_constant = _mm_set_epi64x (0xDC53DFCC, 0xD2536D46);
+  eight_mult_constant = _mm_set_epi64x (0x10BD4D7C, 0x567FDDEB);
 
   /* Constant to byteswap a full SSE register */
   shuffle_constant = _mm_set_epi8 (0, 1, 2, 3, 4, 5, 6, 7, 8,
@@ -84,10 +84,6 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
       __m128i data8;
       __m128i fold_data;
       __m128i xor_crc;
-      __m128i chorba1;
-      __m128i chorba2;
-      __m128i chorba3;
-      __m128i chorba4;
       __m128i chorba5;
       __m128i chorba6;
       __m128i chorba7;
@@ -134,29 +130,6 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
           while (bytes_read >= 512 + 64 + 16 * 8)
             {
               data_offset += 4;
-              chorba1 = _mm_loadu_si128 (datap + (data_offset % ((BUFLEN * 2)
-                                                                 /
-                                                                 sizeof
-                                                                 (__m128i))));
-              chorba1 = _mm_shuffle_epi8 (chorba1, shuffle_constant);
-              chorba2 = _mm_loadu_si128 (datap + (data_offset % ((BUFLEN * 2)
-                                                                 /
-                                                                 sizeof
-                                                                 (__m128i))) +
-                                         1);
-              chorba2 = _mm_shuffle_epi8 (chorba2, shuffle_constant);
-              chorba3 = _mm_loadu_si128 (datap + (data_offset % ((BUFLEN * 2)
-                                                                 /
-                                                                 sizeof
-                                                                 (__m128i))) +
-                                         2);
-              chorba3 = _mm_shuffle_epi8 (chorba3, shuffle_constant);
-              chorba4 = _mm_loadu_si128 (datap + (data_offset % ((BUFLEN * 2)
-                                                                 /
-                                                                 sizeof
-                                                                 (__m128i))) +
-                                         3);
-              chorba4 = _mm_shuffle_epi8 (chorba4, shuffle_constant);
               chorba5 = _mm_loadu_si128 (datap + (data_offset % ((BUFLEN * 2)
                                                                  /
                                                                  sizeof
@@ -174,38 +147,30 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                  sizeof
                                                                  (__m128i))) +
                                          6);
-              chorba7 =
-                _mm_shuffle_epi8 (chorba7, shuffle_constant) ^ chorba1;
+              chorba7 = _mm_shuffle_epi8 (chorba7, shuffle_constant);
               chorba8 =
                 _mm_loadu_si128 (datap +
                                  (data_offset %
                                   ((BUFLEN * 2) / sizeof (__m128i))) + 7);
-              chorba8 =
-                _mm_shuffle_epi8 (chorba8, shuffle_constant) ^ chorba2;
-              bytes_read -= (16 * 8);
-              data_offset += 8;
+              chorba8 = _mm_shuffle_epi8 (chorba8, shuffle_constant);
+              bytes_read -= (16 * 4);
+              data_offset += 4;
 
-              data2 = _mm_clmulepi64_si128 (data, twelve_mult_constant, 0x00);
-              data = _mm_clmulepi64_si128 (data, twelve_mult_constant, 0x11);
-              data4 =
-                _mm_clmulepi64_si128 (data3, twelve_mult_constant, 0x00);
-              data3 =
-                _mm_clmulepi64_si128 (data3, twelve_mult_constant, 0x11);
-              data6 =
-                _mm_clmulepi64_si128 (data5, twelve_mult_constant, 0x00);
-              data5 =
-                _mm_clmulepi64_si128 (data5, twelve_mult_constant, 0x11);
-              data8 =
-                _mm_clmulepi64_si128 (data7, twelve_mult_constant, 0x00);
-              data7 =
-                _mm_clmulepi64_si128 (data7, twelve_mult_constant, 0x11);
+              data2 = _mm_clmulepi64_si128 (data, eight_mult_constant, 0x00);
+              data = _mm_clmulepi64_si128 (data, eight_mult_constant, 0x11);
+              data4 = _mm_clmulepi64_si128 (data3, eight_mult_constant, 0x00);
+              data3 = _mm_clmulepi64_si128 (data3, eight_mult_constant, 0x11);
+              data6 = _mm_clmulepi64_si128 (data5, eight_mult_constant, 0x00);
+              data5 = _mm_clmulepi64_si128 (data5, eight_mult_constant, 0x11);
+              data8 = _mm_clmulepi64_si128 (data7, eight_mult_constant, 0x00);
+              data7 = _mm_clmulepi64_si128 (data7, eight_mult_constant, 0x11);
 
               data = _mm_xor_si128 (data, data2);
               data2 = _mm_loadu_si128 (datap + (data_offset % ((BUFLEN * 2)
                                                                /
                                                                sizeof
                                                                (__m128i))));
-              data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba3;
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant);
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
@@ -214,9 +179,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                sizeof
                                                                (__m128i))) +
                                        1);
-              data4 =
-                _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba4 ^ chorba1;
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant);
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
@@ -227,8 +190,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        2);
               data6 =
                 _mm_shuffle_epi8 (data6,
-                                  shuffle_constant) ^ chorba5 ^ chorba2 ^
-                chorba1;
+                                  shuffle_constant) ^ chorba5;
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
@@ -239,8 +201,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        3);
               data8 =
                 _mm_shuffle_epi8 (data8,
-                                  shuffle_constant) ^ chorba6 ^ chorba3 ^
-                chorba2;
+                                  shuffle_constant) ^ chorba6;
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
@@ -262,8 +223,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                (__m128i))));
               data2 =
                 _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba7 ^ chorba4 ^
-                chorba3;
+                                  shuffle_constant) ^ chorba7;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
@@ -274,8 +234,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        1);
               data4 =
                 _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba8 ^ chorba5 ^
-                chorba4;
+                                  shuffle_constant) ^ chorba8 ^ chorba5;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
@@ -320,8 +279,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                (__m128i))));
               data2 =
                 _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba8 ^ chorba7 ^
-                chorba1;
+                                  shuffle_constant) ^ chorba8 ^ chorba7;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
@@ -330,9 +288,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                sizeof
                                                                (__m128i))) +
                                        1);
-              data4 =
-                _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba8 ^ chorba2;
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba8;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
@@ -341,7 +297,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                sizeof
                                                                (__m128i))) +
                                        2);
-              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba3;
+              data6 = _mm_shuffle_epi8 (data6, shuffle_constant);
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
@@ -350,7 +306,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                sizeof
                                                                (__m128i))) +
                                        3);
-              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba4;
+              data8 = _mm_shuffle_epi8 (data8, shuffle_constant);
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
@@ -371,9 +327,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                /
                                                                sizeof
                                                                (__m128i))));
-              data2 =
-                _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba5 ^ chorba1;
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba5;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
@@ -384,8 +338,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        1);
               data4 =
                 _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba6 ^ chorba2 ^
-                chorba1;
+                                  shuffle_constant) ^ chorba6;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
@@ -396,8 +349,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        2);
               data6 =
                 _mm_shuffle_epi8 (data6,
-                                  shuffle_constant) ^ chorba7 ^ chorba3 ^
-                chorba2 ^ chorba1;
+                                  shuffle_constant) ^ chorba7;
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
@@ -408,8 +360,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        3);
               data8 =
                 _mm_shuffle_epi8 (data8,
-                                  shuffle_constant) ^ chorba8 ^ chorba4 ^
-                chorba3 ^ chorba2;
+                                  shuffle_constant) ^ chorba8;
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
@@ -432,8 +383,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                                                (__m128i))));
               data2 =
                 _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba5 ^ chorba4 ^
-                chorba3 ^ chorba1;
+                                  shuffle_constant) ^ chorba5;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
@@ -444,8 +394,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        1);
               data4 =
                 _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba6 ^ chorba5 ^
-                chorba4 ^ chorba2 ^ chorba1;
+                                  shuffle_constant) ^ chorba6 ^ chorba5;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
@@ -457,7 +406,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data6 =
                 _mm_shuffle_epi8 (data6,
                                   shuffle_constant) ^ chorba7 ^ chorba6 ^
-                chorba5 ^ chorba3 ^ chorba2;
+                chorba5;
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
@@ -469,7 +418,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data8 =
                 _mm_shuffle_epi8 (data8,
                                   shuffle_constant) ^ chorba8 ^ chorba7 ^
-                chorba6 ^ chorba4 ^ chorba3 ^ chorba1;
+                chorba6;
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
@@ -493,7 +442,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data2 =
                 _mm_shuffle_epi8 (data2,
                                   shuffle_constant) ^ chorba8 ^ chorba7 ^
-                chorba5 ^ chorba4 ^ chorba2 ^ chorba1;
+                chorba5;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
@@ -505,7 +454,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data4 =
                 _mm_shuffle_epi8 (data4,
                                   shuffle_constant) ^ chorba8 ^ chorba6 ^
-                chorba5 ^ chorba3 ^ chorba2;
+                chorba5;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
@@ -516,8 +465,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        2);
               data6 =
                 _mm_shuffle_epi8 (data6,
-                                  shuffle_constant) ^ chorba7 ^ chorba6 ^
-                chorba4 ^ chorba3 ^ chorba1;
+                                  shuffle_constant) ^ chorba7 ^ chorba6;
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
@@ -529,7 +477,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data8 =
                 _mm_shuffle_epi8 (data8,
                                   shuffle_constant) ^ chorba8 ^ chorba7 ^
-                chorba5 ^ chorba4 ^ chorba2 ^ chorba1;
+                chorba5;
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
@@ -553,7 +501,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data2 =
                 _mm_shuffle_epi8 (data2,
                                   shuffle_constant) ^ chorba8 ^ chorba6 ^
-                chorba5 ^ chorba3 ^ chorba2 ^ chorba1;
+                chorba5;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
@@ -564,8 +512,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                                        1);
               data4 =
                 _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba7 ^ chorba6 ^
-                chorba4 ^ chorba3 ^ chorba2;
+                                  shuffle_constant) ^ chorba7 ^ chorba6;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
@@ -577,7 +524,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data6 =
                 _mm_shuffle_epi8 (data6,
                                   shuffle_constant) ^ chorba8 ^ chorba7 ^
-                chorba5 ^ chorba4 ^ chorba3;
+                chorba5;
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
@@ -589,7 +536,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data8 =
                 _mm_shuffle_epi8 (data8,
                                   shuffle_constant) ^ chorba8 ^ chorba6 ^
-                chorba5 ^ chorba4;
+                chorba5;
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
