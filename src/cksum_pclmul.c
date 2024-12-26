@@ -85,14 +85,10 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
       __m128i data8;
       __m128i fold_data;
       __m128i xor_crc;
-      __m128i chorba1 = _mm_set_epi64x (0, 0);
-      __m128i chorba2 = _mm_set_epi64x (0, 0);
-      __m128i chorba3 = _mm_set_epi64x (0, 0);
-      __m128i chorba4 = _mm_set_epi64x (0, 0);
-      __m128i chorba5 = _mm_set_epi64x (0, 0);
-      __m128i chorba6 = _mm_set_epi64x (0, 0);
-      __m128i chorba7 = _mm_set_epi64x (0, 0);
-      __m128i chorba8 = _mm_set_epi64x (0, 0);
+      __m128i chorba1 = _mm_set_epi64x(0, 0);
+      __m128i chorba2 = _mm_set_epi64x(0, 0);
+      __m128i chorba3 = _mm_set_epi64x(0, 0);
+      __m128i chorba4 = _mm_set_epi64x(0, 0);
 
       if (length + bytes_read < length)
         {
@@ -113,556 +109,301 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
           xor_crc = _mm_set_epi32 (crc, 0, 0, 0);
           crc = 0;
           data = _mm_xor_si128 (data, xor_crc);
-          data3 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+          data3 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS)
+                                   + 1);
           data3 = _mm_shuffle_epi8 (data3, shuffle_constant);
-          data5 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+          data5 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS)
+                                   + 2);
           data5 = _mm_shuffle_epi8 (data5, shuffle_constant);
-          data7 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+          data7 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS)
+                                   + 3);
           data7 = _mm_shuffle_epi8 (data7, shuffle_constant);
 
           // use the chorba method to copy 8 vars forward without pclmul
-          if (bytes_read >= 512 * 2 + 64 + 16 * 8)
+          if (bytes_read >= 512*2 + 64 + 16 * 8)
             {
-              while (bytes_read >= 512 * 2 + 64 + 16 * 8)
+              while (bytes_read >= 512*2 + 64 + 16 * 8)
                 {
                   data_offset += 4;
 
-                  chorba1 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     4);
-                  chorba1 =
-                    _mm_shuffle_epi8 (chorba1,
-                                      shuffle_constant) ^ chorba3 ^ chorba4 ^
-                    chorba5 ^ chorba7;
+                  chorba1 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 4);
+                  chorba1 = _mm_shuffle_epi8 (chorba1, shuffle_constant) ^ chorba2 ^ chorba4;
                   bytes_read -= 16;
                   data_offset += 1;
 
-                  data2 =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
-                  data =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
-                  data4 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
-                  data3 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
-                  data6 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
-                  data5 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
-                  data8 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
-                  data7 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
+                  data2 = _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
+                  data = _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
+                  data4 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
+                  data3 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
+                  data6 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
+                  data5 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
+                  data8 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
+                  data7 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
 
                   data = _mm_xor_si128 (data, data2);
-                  data2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-                  data2 =
-                    _mm_shuffle_epi8 (data2,
-                                      shuffle_constant) ^ chorba3 ^ chorba5 ^
-                    chorba6 ^ chorba8;
+                  data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                  data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba2 ^ chorba4;
                   data = _mm_xor_si128 (data, data2);
 
                   data3 = _mm_xor_si128 (data3, data4);
-                  data4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     1);
-                  data4 =
-                    _mm_shuffle_epi8 (data4,
-                                      shuffle_constant) ^ chorba3 ^ chorba4 ^
-                    chorba5;
+                  data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+                  data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba3;
                   data3 = _mm_xor_si128 (data3, data4);
 
                   data5 = _mm_xor_si128 (data5, data6);
-                  data6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     2);
-                  data6 =
-                    _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba4;
+                  data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+                  data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba2 ^ chorba3;
                   data5 = _mm_xor_si128 (data5, data6);
 
                   data7 = _mm_xor_si128 (data7, data8);
-                  data8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     3);
-                  data8 =
-                    _mm_shuffle_epi8 (data8,
-                                      shuffle_constant) ^ chorba5 ^ chorba8;
+                  data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+                  data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba2 ^ chorba3;
                   data7 = _mm_xor_si128 (data7, data8);
 
                   bytes_read -= (16 * 4);
 
                   data_offset += 4;
 
-                  chorba2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     4);
-                  chorba2 =
-                    _mm_shuffle_epi8 (chorba2,
-                                      shuffle_constant) ^ chorba4 ^ chorba5 ^
-                    chorba6 ^ chorba8;
-                  bytes_read -= 16;
-                  data_offset += 1;
-
-                  data2 =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
-                  data =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
-                  data4 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
-                  data3 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
-                  data6 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
-                  data5 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
-                  data8 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
-                  data7 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
+                  data2 = _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
+                  data = _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
+                  data4 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
+                  data3 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
+                  data6 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
+                  data5 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
+                  data8 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
+                  data7 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
 
                   data = _mm_xor_si128 (data, data2);
-                  data2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-                  data2 =
-                    _mm_shuffle_epi8 (data2,
-                                      shuffle_constant) ^ chorba4 ^ chorba6 ^
-                    chorba7 ^ chorba1;
+                  data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                  data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba2;
                   data = _mm_xor_si128 (data, data2);
 
                   data3 = _mm_xor_si128 (data3, data4);
-                  data4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     1);
-                  data4 =
-                    _mm_shuffle_epi8 (data4,
-                                      shuffle_constant) ^ chorba4 ^ chorba5 ^
-                    chorba6;
+                  data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+                  data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba1 ^ chorba3;
                   data3 = _mm_xor_si128 (data3, data4);
 
                   data5 = _mm_xor_si128 (data5, data6);
-                  data6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     2);
-                  data6 =
-                    _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba5;
+                  data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+                  data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba3 ^ chorba4;
                   data5 = _mm_xor_si128 (data5, data6);
 
                   data7 = _mm_xor_si128 (data7, data8);
-                  data8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     3);
-                  data8 =
-                    _mm_shuffle_epi8 (data8,
-                                      shuffle_constant) ^ chorba6 ^ chorba1;
+                  data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+                  data8 = _mm_shuffle_epi8 (data8, shuffle_constant);
                   data7 = _mm_xor_si128 (data7, data8);
 
                   bytes_read -= (16 * 4);
 
-
                   data_offset += 4;
 
-                  chorba3 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     4);
-                  chorba3 =
-                    _mm_shuffle_epi8 (chorba3,
-                                      shuffle_constant) ^ chorba5 ^ chorba6 ^
-                    chorba7 ^ chorba1;
+                  chorba2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 4);
+                  chorba2 = _mm_shuffle_epi8 (chorba2, shuffle_constant) ^ chorba3 ^ chorba1;
                   bytes_read -= 16;
                   data_offset += 1;
 
-                  data2 =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
-                  data =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
-                  data4 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
-                  data3 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
-                  data6 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
-                  data5 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
-                  data8 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
-                  data7 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
+                  data2 = _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
+                  data = _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
+                  data4 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
+                  data3 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
+                  data6 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
+                  data5 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
+                  data8 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
+                  data7 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
 
                   data = _mm_xor_si128 (data, data2);
-                  data2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-                  data2 =
-                    _mm_shuffle_epi8 (data2,
-                                      shuffle_constant) ^ chorba5 ^ chorba7 ^
-                    chorba8 ^ chorba2;
+                  data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                  data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba3 ^ chorba1;
                   data = _mm_xor_si128 (data, data2);
 
                   data3 = _mm_xor_si128 (data3, data4);
-                  data4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     1);
-                  data4 =
-                    _mm_shuffle_epi8 (data4,
-                                      shuffle_constant) ^ chorba5 ^ chorba6 ^
-                    chorba7;
+                  data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+                  data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba4;
                   data3 = _mm_xor_si128 (data3, data4);
 
                   data5 = _mm_xor_si128 (data5, data6);
-                  data6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     2);
-                  data6 =
-                    _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba6;
+                  data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+                  data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba3 ^ chorba4;
                   data5 = _mm_xor_si128 (data5, data6);
 
                   data7 = _mm_xor_si128 (data7, data8);
-                  data8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     3);
-                  data8 =
-                    _mm_shuffle_epi8 (data8,
-                                      shuffle_constant) ^ chorba7 ^ chorba2;
+                  data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+                  data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba3 ^ chorba4;
                   data7 = _mm_xor_si128 (data7, data8);
 
                   bytes_read -= (16 * 4);
 
-
                   data_offset += 4;
 
-                  chorba4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     4);
-                  chorba4 =
-                    _mm_shuffle_epi8 (chorba4,
-                                      shuffle_constant) ^ chorba6 ^ chorba7 ^
-                    chorba8 ^ chorba2;
-                  bytes_read -= 16;
-                  data_offset += 1;
-
-                  data2 =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
-                  data =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
-                  data4 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
-                  data3 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
-                  data6 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
-                  data5 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
-                  data8 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
-                  data7 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
+                  data2 = _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
+                  data = _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
+                  data4 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
+                  data3 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
+                  data6 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
+                  data5 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
+                  data8 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
+                  data7 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
 
                   data = _mm_xor_si128 (data, data2);
-                  data2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-                  data2 =
-                    _mm_shuffle_epi8 (data2,
-                                      shuffle_constant) ^ chorba6 ^ chorba8 ^
-                    chorba1 ^ chorba3;
+                  data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                  data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba3;
                   data = _mm_xor_si128 (data, data2);
 
                   data3 = _mm_xor_si128 (data3, data4);
-                  data4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     1);
-                  data4 =
-                    _mm_shuffle_epi8 (data4,
-                                      shuffle_constant) ^ chorba6 ^ chorba7 ^
-                    chorba8;
+                  data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+                  data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba2 ^ chorba4;
                   data3 = _mm_xor_si128 (data3, data4);
 
                   data5 = _mm_xor_si128 (data5, data6);
-                  data6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     2);
-                  data6 =
-                    _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba7;
+                  data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+                  data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba4 ^ chorba1;
                   data5 = _mm_xor_si128 (data5, data6);
 
                   data7 = _mm_xor_si128 (data7, data8);
-                  data8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     3);
-                  data8 =
-                    _mm_shuffle_epi8 (data8,
-                                      shuffle_constant) ^ chorba8 ^ chorba3;
+                  data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+                  data8 = _mm_shuffle_epi8 (data8, shuffle_constant);
                   data7 = _mm_xor_si128 (data7, data8);
 
                   bytes_read -= (16 * 4);
 
-
                   data_offset += 4;
 
-                  chorba5 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     4);
-                  chorba5 =
-                    _mm_shuffle_epi8 (chorba5,
-                                      shuffle_constant) ^ chorba7 ^ chorba8 ^
-                    chorba1 ^ chorba3;
+                  chorba3 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 4);
+                  chorba3 = _mm_shuffle_epi8 (chorba3, shuffle_constant) ^ chorba4 ^ chorba2;
                   bytes_read -= 16;
                   data_offset += 1;
 
-                  data2 =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
-                  data =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
-                  data4 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
-                  data3 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
-                  data6 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
-                  data5 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
-                  data8 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
-                  data7 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
+                  data2 = _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
+                  data = _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
+                  data4 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
+                  data3 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
+                  data6 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
+                  data5 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
+                  data8 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
+                  data7 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
 
                   data = _mm_xor_si128 (data, data2);
-                  data2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-                  data2 =
-                    _mm_shuffle_epi8 (data2,
-                                      shuffle_constant) ^ chorba7 ^ chorba1 ^
-                    chorba2 ^ chorba4;
+                  data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                  data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba4 ^ chorba2;
                   data = _mm_xor_si128 (data, data2);
 
                   data3 = _mm_xor_si128 (data3, data4);
-                  data4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     1);
-                  data4 =
-                    _mm_shuffle_epi8 (data4,
-                                      shuffle_constant) ^ chorba7 ^ chorba8 ^
-                    chorba1;
+                  data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+                  data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba1;
                   data3 = _mm_xor_si128 (data3, data4);
 
                   data5 = _mm_xor_si128 (data5, data6);
-                  data6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     2);
-                  data6 =
-                    _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba8;
+                  data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+                  data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba4 ^ chorba1;
                   data5 = _mm_xor_si128 (data5, data6);
 
                   data7 = _mm_xor_si128 (data7, data8);
-                  data8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     3);
-                  data8 =
-                    _mm_shuffle_epi8 (data8,
-                                      shuffle_constant) ^ chorba1 ^ chorba4;
+                  data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+                  data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba4 ^ chorba1;
                   data7 = _mm_xor_si128 (data7, data8);
 
                   bytes_read -= (16 * 4);
 
-
                   data_offset += 4;
 
-                  chorba6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     4);
-                  chorba6 =
-                    _mm_shuffle_epi8 (chorba6,
-                                      shuffle_constant) ^ chorba8 ^ chorba1 ^
-                    chorba2 ^ chorba4;
-                  bytes_read -= 16;
-                  data_offset += 1;
-
-                  data2 =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
-                  data =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
-                  data4 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
-                  data3 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
-                  data6 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
-                  data5 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
-                  data8 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
-                  data7 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
+                  data2 = _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
+                  data = _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
+                  data4 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
+                  data3 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
+                  data6 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
+                  data5 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
+                  data8 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
+                  data7 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
 
                   data = _mm_xor_si128 (data, data2);
-                  data2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-                  data2 =
-                    _mm_shuffle_epi8 (data2,
-                                      shuffle_constant) ^ chorba8 ^ chorba2 ^
-                    chorba3 ^ chorba5;
+                  data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                  data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba4;
                   data = _mm_xor_si128 (data, data2);
 
                   data3 = _mm_xor_si128 (data3, data4);
-                  data4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     1);
-                  data4 =
-                    _mm_shuffle_epi8 (data4,
-                                      shuffle_constant) ^ chorba8 ^ chorba1 ^
-                    chorba2;
+                  data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+                  data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba3 ^ chorba1;
                   data3 = _mm_xor_si128 (data3, data4);
 
                   data5 = _mm_xor_si128 (data5, data6);
-                  data6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     2);
-                  data6 =
-                    _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba1;
+                  data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+                  data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba1 ^ chorba2;
                   data5 = _mm_xor_si128 (data5, data6);
 
                   data7 = _mm_xor_si128 (data7, data8);
-                  data8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     3);
-                  data8 =
-                    _mm_shuffle_epi8 (data8,
-                                      shuffle_constant) ^ chorba2 ^ chorba5;
+                  data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+                  data8 = _mm_shuffle_epi8 (data8, shuffle_constant);
                   data7 = _mm_xor_si128 (data7, data8);
 
                   bytes_read -= (16 * 4);
 
-
                   data_offset += 4;
 
-                  chorba7 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     4);
-                  chorba7 =
-                    _mm_shuffle_epi8 (chorba7,
-                                      shuffle_constant) ^ chorba1 ^ chorba2 ^
-                    chorba3 ^ chorba5;
+                  chorba4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 4);
+                  chorba4 = _mm_shuffle_epi8 (chorba4, shuffle_constant) ^ chorba1 ^ chorba3;
                   bytes_read -= 16;
                   data_offset += 1;
 
-                  data2 =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
-                  data =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
-                  data4 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
-                  data3 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
-                  data6 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
-                  data5 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
-                  data8 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
-                  data7 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
+                  data2 = _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
+                  data = _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
+                  data4 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
+                  data3 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
+                  data6 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
+                  data5 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
+                  data8 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
+                  data7 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
 
                   data = _mm_xor_si128 (data, data2);
-                  data2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-                  data2 =
-                    _mm_shuffle_epi8 (data2,
-                                      shuffle_constant) ^ chorba1 ^ chorba3 ^
-                    chorba4 ^ chorba6;
+                  data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                  data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba1 ^ chorba3;
                   data = _mm_xor_si128 (data, data2);
 
                   data3 = _mm_xor_si128 (data3, data4);
-                  data4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     1);
-                  data4 =
-                    _mm_shuffle_epi8 (data4,
-                                      shuffle_constant) ^ chorba1 ^ chorba2 ^
-                    chorba3;
+                  data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+                  data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba2;
                   data3 = _mm_xor_si128 (data3, data4);
 
                   data5 = _mm_xor_si128 (data5, data6);
-                  data6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     2);
-                  data6 =
-                    _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba2;
+                  data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+                  data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba1 ^ chorba2;
                   data5 = _mm_xor_si128 (data5, data6);
 
                   data7 = _mm_xor_si128 (data7, data8);
-                  data8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     3);
-                  data8 =
-                    _mm_shuffle_epi8 (data8,
-                                      shuffle_constant) ^ chorba3 ^ chorba6;
+                  data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+                  data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba1 ^ chorba2;
                   data7 = _mm_xor_si128 (data7, data8);
 
                   bytes_read -= (16 * 4);
 
-
                   data_offset += 4;
 
-                  chorba8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     4);
-                  chorba8 =
-                    _mm_shuffle_epi8 (chorba8,
-                                      shuffle_constant) ^ chorba2 ^ chorba3 ^
-                    chorba4 ^ chorba6;
-                  bytes_read -= 16;
-                  data_offset += 1;
-
-                  data2 =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
-                  data =
-                    _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
-                  data4 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
-                  data3 =
-                    _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
-                  data6 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
-                  data5 =
-                    _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
-                  data8 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
-                  data7 =
-                    _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
+                  data2 = _mm_clmulepi64_si128 (data, five_mult_constant, 0x00);
+                  data = _mm_clmulepi64_si128 (data, five_mult_constant, 0x11);
+                  data4 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x00);
+                  data3 = _mm_clmulepi64_si128 (data3, five_mult_constant, 0x11);
+                  data6 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x00);
+                  data5 = _mm_clmulepi64_si128 (data5, five_mult_constant, 0x11);
+                  data8 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x00);
+                  data7 = _mm_clmulepi64_si128 (data7, five_mult_constant, 0x11);
 
                   data = _mm_xor_si128 (data, data2);
-                  data2 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-                  data2 =
-                    _mm_shuffle_epi8 (data2,
-                                      shuffle_constant) ^ chorba2 ^ chorba4 ^
-                    chorba5 ^ chorba7;
+                  data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                  data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba1;
                   data = _mm_xor_si128 (data, data2);
 
                   data3 = _mm_xor_si128 (data3, data4);
-                  data4 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     1);
-                  data4 =
-                    _mm_shuffle_epi8 (data4,
-                                      shuffle_constant) ^ chorba2 ^ chorba3 ^
-                    chorba4;
+                  data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+                  data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba4 ^ chorba2;
                   data3 = _mm_xor_si128 (data3, data4);
 
                   data5 = _mm_xor_si128 (data5, data6);
-                  data6 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     2);
-                  data6 =
-                    _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba3;
+                  data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+                  data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba2 ^ chorba3;
                   data5 = _mm_xor_si128 (data5, data6);
 
                   data7 = _mm_xor_si128 (data7, data8);
-                  data8 =
-                    _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                     3);
-                  data8 =
-                    _mm_shuffle_epi8 (data8,
-                                      shuffle_constant) ^ chorba4 ^ chorba7;
+                  data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+                  data8 = _mm_shuffle_epi8 (data8, shuffle_constant);
                   data7 = _mm_xor_si128 (data7, data8);
 
                   bytes_read -= (16 * 4);
@@ -671,8 +412,7 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
                   /* Refill the buffer if we have used one half */
                   if (bytes_read < (BUFLEN / 2) && data_available)
                     {
-                      batch_size_read =
-                        fread (buf + next_buf, 1, BUFLEN / 2, fp);
+                      batch_size_read = fread (buf + next_buf, 1, BUFLEN / 2, fp);
                       next_buf ^= (BUFLEN_WORDS / 2);
                       data_available = batch_size_read != 0;
                       bytes_read += batch_size_read;
@@ -698,33 +438,22 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
 
               data = _mm_xor_si128 (data, data2);
               data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-              data2 =
-                _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba3 ^ chorba4 ^
-                chorba5 ^ chorba7;
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba2 ^ chorba4;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
-              data4 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
-              data4 =
-                _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba3 ^ chorba5 ^
-                chorba6 ^ chorba8;
+              data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba2 ^ chorba4;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
-              data6 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                 2) ^ chorba3 ^ chorba4 ^ chorba5;
-              data6 = _mm_shuffle_epi8 (data6, shuffle_constant);
+              data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba3;
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
-              data8 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) +
-                                 3) ^ chorba4;
-              data8 = _mm_shuffle_epi8 (data8, shuffle_constant);
+              data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba2 ^ chorba3;
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
@@ -740,201 +469,25 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
 
               data = _mm_xor_si128 (data, data2);
               data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-              data2 =
-                _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba5 ^ chorba8;
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba2 ^ chorba3;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
-              data4 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
-              data4 =
-                _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba4 ^ chorba5 ^
-                chorba6 ^ chorba8;
+              data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba2;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
-              data6 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
-              data6 =
-                _mm_shuffle_epi8 (data6,
-                                  shuffle_constant) ^ chorba4 ^ chorba6 ^
-                chorba7;
+              data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba3;
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
-              data8 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
-              data8 =
-                _mm_shuffle_epi8 (data8,
-                                  shuffle_constant) ^ chorba4 ^ chorba5 ^
-                chorba6;
+              data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba3 ^ chorba4;
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
-
-              data_offset += 4;
-              data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
-              data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
-              data4 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x00);
-              data3 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x11);
-              data6 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x00);
-              data5 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x11);
-              data8 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x00);
-              data7 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x11);
-
-              data = _mm_xor_si128 (data, data2);
-              data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-              data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba5;
-              data = _mm_xor_si128 (data, data2);
-
-              data3 = _mm_xor_si128 (data3, data4);
-              data4 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
-              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba6;
-              data3 = _mm_xor_si128 (data3, data4);
-
-              data5 = _mm_xor_si128 (data5, data6);
-              data6 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
-              data6 =
-                _mm_shuffle_epi8 (data6,
-                                  shuffle_constant) ^ chorba5 ^ chorba6 ^
-                chorba7;
-              data5 = _mm_xor_si128 (data5, data6);
-
-              data7 = _mm_xor_si128 (data7, data8);
-              data8 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
-              data8 =
-                _mm_shuffle_epi8 (data8,
-                                  shuffle_constant) ^ chorba5 ^ chorba7 ^
-                chorba8;
-              data7 = _mm_xor_si128 (data7, data8);
-
-              bytes_read -= (16 * 4);
-
-              data_offset += 4;
-              data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
-              data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
-              data4 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x00);
-              data3 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x11);
-              data6 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x00);
-              data5 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x11);
-              data8 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x00);
-              data7 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x11);
-
-              data = _mm_xor_si128 (data, data2);
-              data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-              data2 =
-                _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba5 ^ chorba6 ^
-                chorba7;
-              data = _mm_xor_si128 (data, data2);
-
-              data3 = _mm_xor_si128 (data3, data4);
-              data4 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
-              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba6;
-              data3 = _mm_xor_si128 (data3, data4);
-
-              data5 = _mm_xor_si128 (data5, data6);
-              data6 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
-              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba7;
-              data5 = _mm_xor_si128 (data5, data6);
-
-              data7 = _mm_xor_si128 (data7, data8);
-              data8 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
-              data8 =
-                _mm_shuffle_epi8 (data8,
-                                  shuffle_constant) ^ chorba6 ^ chorba7 ^
-                chorba8;
-              data7 = _mm_xor_si128 (data7, data8);
-
-              bytes_read -= (16 * 4);
-
-              data_offset += 4;
-              data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
-              data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
-              data4 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x00);
-              data3 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x11);
-              data6 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x00);
-              data5 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x11);
-              data8 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x00);
-              data7 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x11);
-
-              data = _mm_xor_si128 (data, data2);
-              data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-              data2 =
-                _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba6 ^ chorba8;
-              data = _mm_xor_si128 (data, data2);
-
-              data3 = _mm_xor_si128 (data3, data4);
-              data4 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
-              data4 =
-                _mm_shuffle_epi8 (data4,
-                                  shuffle_constant) ^ chorba6 ^ chorba7 ^
-                chorba8;
-              data3 = _mm_xor_si128 (data3, data4);
-
-              data5 = _mm_xor_si128 (data5, data6);
-              data6 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
-              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba7;
-              data5 = _mm_xor_si128 (data5, data6);
-
-              data7 = _mm_xor_si128 (data7, data8);
-              data8 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
-              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba8;
-              data7 = _mm_xor_si128 (data7, data8);
-
-              bytes_read -= (16 * 4);
-
-              data_offset += 4;
-              data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
-              data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
-              data4 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x00);
-              data3 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x11);
-              data6 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x00);
-              data5 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x11);
-              data8 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x00);
-              data7 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x11);
-
-              data = _mm_xor_si128 (data, data2);
-              data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-              data2 =
-                _mm_shuffle_epi8 (data2,
-                                  shuffle_constant) ^ chorba7 ^ chorba8;
-              data = _mm_xor_si128 (data, data2);
-
-              data3 = _mm_xor_si128 (data3, data4);
-              data4 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
-              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba7;
-              data3 = _mm_xor_si128 (data3, data4);
-
-              data5 = _mm_xor_si128 (data5, data6);
-              data6 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
-              data6 =
-                _mm_shuffle_epi8 (data6,
-                                  shuffle_constant) ^ chorba7 ^ chorba8;
-              data5 = _mm_xor_si128 (data5, data6);
-
-              data7 = _mm_xor_si128 (data7, data8);
-              data8 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
-              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba8;
-              data7 = _mm_xor_si128 (data7, data8);
-
-              bytes_read -= (16 * 4);
-
               data_offset += 4;
               data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
               data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
@@ -951,25 +504,21 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
-              data4 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
-              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba8;
+              data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba3;
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
-              data6 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
-              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba8;
+              data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba3;
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
-              data8 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
-              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba8;
+              data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba4;
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
-
               data_offset += 4;
               data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
               data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
@@ -982,29 +531,149 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
 
               data = _mm_xor_si128 (data, data2);
               data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
-              data2 = _mm_shuffle_epi8 (data2, shuffle_constant);
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba3 ^ chorba4;
               data = _mm_xor_si128 (data, data2);
 
               data3 = _mm_xor_si128 (data3, data4);
-              data4 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+              data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba3 ^ chorba4;
+              data3 = _mm_xor_si128 (data3, data4);
+
+              data5 = _mm_xor_si128 (data5, data6);
+              data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba3;
+              data5 = _mm_xor_si128 (data5, data6);
+
+              data7 = _mm_xor_si128 (data7, data8);
+              data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba3;
+              data7 = _mm_xor_si128 (data7, data8);
+
+              bytes_read -= (16 * 4);
+              data_offset += 4;
+              data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
+              data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
+              data4 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x00);
+              data3 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x11);
+              data6 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x00);
+              data5 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x11);
+              data8 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x00);
+              data7 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x11);
+
+              data = _mm_xor_si128 (data, data2);
+              data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant) ^ chorba4;
+              data = _mm_xor_si128 (data, data2);
+
+              data3 = _mm_xor_si128 (data3, data4);
+              data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
               data4 = _mm_shuffle_epi8 (data4, shuffle_constant);
               data3 = _mm_xor_si128 (data3, data4);
 
               data5 = _mm_xor_si128 (data5, data6);
-              data6 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+              data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba4;
+              data5 = _mm_xor_si128 (data5, data6);
+
+              data7 = _mm_xor_si128 (data7, data8);
+              data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba4;
+              data7 = _mm_xor_si128 (data7, data8);
+
+              bytes_read -= (16 * 4);
+              data_offset += 4;
+              data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
+              data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
+              data4 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x00);
+              data3 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x11);
+              data6 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x00);
+              data5 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x11);
+              data8 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x00);
+              data7 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x11);
+
+              data = _mm_xor_si128 (data, data2);
+              data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant);
+              data = _mm_xor_si128 (data, data2);
+
+              data3 = _mm_xor_si128 (data3, data4);
+              data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant) ^ chorba4;
+              data3 = _mm_xor_si128 (data3, data4);
+
+              data5 = _mm_xor_si128 (data5, data6);
+              data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+              data6 = _mm_shuffle_epi8 (data6, shuffle_constant) ^ chorba4;
+              data5 = _mm_xor_si128 (data5, data6);
+
+              data7 = _mm_xor_si128 (data7, data8);
+              data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+              data8 = _mm_shuffle_epi8 (data8, shuffle_constant) ^ chorba4;
+              data7 = _mm_xor_si128 (data7, data8);
+
+              bytes_read -= (16 * 4);
+              data_offset += 4;
+              data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
+              data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
+              data4 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x00);
+              data3 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x11);
+              data6 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x00);
+              data5 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x11);
+              data8 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x00);
+              data7 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x11);
+
+              data = _mm_xor_si128 (data, data2);
+              data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant);
+              data = _mm_xor_si128 (data, data2);
+
+              data3 = _mm_xor_si128 (data3, data4);
+              data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant);
+              data3 = _mm_xor_si128 (data3, data4);
+
+              data5 = _mm_xor_si128 (data5, data6);
+              data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
               data6 = _mm_shuffle_epi8 (data6, shuffle_constant);
               data5 = _mm_xor_si128 (data5, data6);
 
               data7 = _mm_xor_si128 (data7, data8);
-              data8 =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+              data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
               data8 = _mm_shuffle_epi8 (data8, shuffle_constant);
               data7 = _mm_xor_si128 (data7, data8);
 
               bytes_read -= (16 * 4);
+              data_offset += 4;
+              data2 = _mm_clmulepi64_si128 (data, four_mult_constant, 0x00);
+              data = _mm_clmulepi64_si128 (data, four_mult_constant, 0x11);
+              data4 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x00);
+              data3 = _mm_clmulepi64_si128 (data3, four_mult_constant, 0x11);
+              data6 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x00);
+              data5 = _mm_clmulepi64_si128 (data5, four_mult_constant, 0x11);
+              data8 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x00);
+              data7 = _mm_clmulepi64_si128 (data7, four_mult_constant, 0x11);
 
+              data = _mm_xor_si128 (data, data2);
+              data2 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+              data2 = _mm_shuffle_epi8 (data2, shuffle_constant);
+              data = _mm_xor_si128 (data, data2);
+
+              data3 = _mm_xor_si128 (data3, data4);
+              data4 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1);
+              data4 = _mm_shuffle_epi8 (data4, shuffle_constant);
+              data3 = _mm_xor_si128 (data3, data4);
+
+              data5 = _mm_xor_si128 (data5, data6);
+              data6 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2);
+              data6 = _mm_shuffle_epi8 (data6, shuffle_constant);
+              data5 = _mm_xor_si128 (data5, data6);
+
+              data7 = _mm_xor_si128 (data7, data8);
+              data8 = _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3);
+              data8 = _mm_shuffle_epi8 (data8, shuffle_constant);
+              data7 = _mm_xor_si128 (data7, data8);
+
+              bytes_read -= (16 * 4);
               /* Refill the buffer if we have used one half */
               if (bytes_read < (BUFLEN / 2) && data_available)
                 {
@@ -1069,13 +738,17 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
           /* At end of loop we write out results from variables back into
              the buffer, for use in single fold loop */
           data = _mm_shuffle_epi8 (data, shuffle_constant);
-          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS), data);
+          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS),
+                            data);
           data3 = _mm_shuffle_epi8 (data3, shuffle_constant);
-          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1, data3);
+          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS) + 1,
+                            data3);
           data5 = _mm_shuffle_epi8 (data5, shuffle_constant);
-          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2, data5);
+          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS) + 2,
+                            data5);
           data7 = _mm_shuffle_epi8 (data7, shuffle_constant);
-          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3, data7);
+          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS) + 3,
+                            data7);
         }
 
       /* Fold two 16-byte blocks into one 16-byte block */
@@ -1093,14 +766,17 @@ cksum_pclmul (FILE *fp, uint_fast32_t *crc_out, uintmax_t *length_out)
               data2 = _mm_clmulepi64_si128 (data, single_mult_constant, 0x00);
               data = _mm_clmulepi64_si128 (data, single_mult_constant, 0x11);
               fold_data =
-                _mm_loadu_si128 (datap + (data_offset % BUFLEN_WORDS));
+                _mm_loadu_si128 (datap +
+                                 (data_offset %
+                                  BUFLEN_WORDS));
               fold_data = _mm_shuffle_epi8 (fold_data, shuffle_constant);
               data = _mm_xor_si128 (data, data2);
               data = _mm_xor_si128 (data, fold_data);
               bytes_read -= 16;
             }
           data = _mm_shuffle_epi8 (data, shuffle_constant);
-          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS), data);
+          _mm_storeu_si128 (datap + (data_offset % BUFLEN_WORDS),
+                            data);
         }
 
       /* And finish up last 0-31 bytes in a byte by byte fashion */
